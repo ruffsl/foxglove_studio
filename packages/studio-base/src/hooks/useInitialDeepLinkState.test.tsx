@@ -17,6 +17,7 @@ import { useInitialDeepLinkState } from "@foxglove/studio-base/hooks/useInitialD
 import { useSessionStorageValue } from "@foxglove/studio-base/hooks/useSessionStorageValue";
 import { Player } from "@foxglove/studio-base/players/types";
 import EventsProvider from "@foxglove/studio-base/providers/EventsProvider";
+import LayoutManagerProvider from "@foxglove/studio-base/providers/LayoutManagerProvider";
 import { LaunchPreferenceValue } from "@foxglove/studio-base/types/LaunchPreferenceValue";
 
 jest.mock("@foxglove/studio-base/hooks/useSessionStorageValue");
