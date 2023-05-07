@@ -10,11 +10,15 @@ import {
   useMessagePipeline,
 } from "@foxglove/studio-base/components/MessagePipeline";
 import { useCurrentLayoutActions } from "@foxglove/studio-base/context/CurrentLayoutContext";
+import { LayoutData } from "@foxglove/studio-base/context/CurrentLayoutContext/actions";
 import { useCurrentUser } from "@foxglove/studio-base/context/CurrentUserContext";
 import { EventsStore, useEvents } from "@foxglove/studio-base/context/EventsContext";
+import { useLayoutManager } from "@foxglove/studio-base/context/LayoutManagerContext";
 import { usePlayerSelection } from "@foxglove/studio-base/context/PlayerSelectionContext";
+import useCallbackWithToast from "@foxglove/studio-base/hooks/useCallbackWithToast";
 import { PlayerPresence } from "@foxglove/studio-base/players/types";
 import { AppURLState, parseAppURLState } from "@foxglove/studio-base/util/appURLState";
+import { windowAppURL } from "@foxglove/studio-base/util/appURLState";
 
 const selectPlayerPresence = (ctx: MessagePipelineContext) => ctx.playerState.presence;
 const selectSeek = (ctx: MessagePipelineContext) => ctx.seekPlayback;
@@ -77,11 +81,43 @@ function useSyncLayoutFromUrl(
   const { setSelectedLayoutId } = useCurrentLayoutActions();
   const playerPresence = useMessagePipeline(selectPlayerPresence);
   const [unappliedLayoutArgs, setUnappliedLayoutArgs] = useState(
-    targetUrlState ? { layoutId: targetUrlState.layoutId } : undefined,
+    targetUrlState ? { layoutId: targetUrlState.layoutId, layoutUrl: targetUrlState.layoutUrl } : undefined,
   );
+  const layoutManager = useLayoutManager();
+
+  const fetchLayoutFromUrl = useCallbackWithToast(async () => {
+    if (!unappliedLayoutArgs?.layoutUrl) {
+      return;
+    }
+    const url = new URL(unappliedLayoutArgs.layoutUrl, windowAppURL());
+    const layoutName = url.pathname.replace(/.*\//, '')
+    log.debug(`Trying to load layout ${layoutName} from ${url}`);
+    let res;
+    try {
+      res = await fetch(url.href);
+    } catch {
+      log.debug(`Could not load the layout from ${url}`);
+      return;
+    }
+    const parsedState: unknown = JSON.parse(await res.text());
+
+    if (typeof parsedState !== "object" || !parsedState) {
+      log.debug(`${url} does not contain valid layout JSON`);
+      return;
+    }
+
+    const layoutData = parsedState as LayoutData
+    const newLayout = await layoutManager.saveNewLayout({
+      name: layoutName,
+      data: layoutData,
+      permission: "CREATOR_WRITE",
+    });
+    unappliedLayoutArgs.layoutId = newLayout.id;
+  }, [layoutManager, unappliedLayoutArgs]);
+
   // Select layout from URL.
   useEffect(() => {
-    if (!unappliedLayoutArgs?.layoutId) {
+    if (!unappliedLayoutArgs?.layoutId && !unappliedLayoutArgs?.layoutUrl) {
       return;
     }
 
@@ -92,10 +128,23 @@ function useSyncLayoutFromUrl(
       return;
     }
 
+    // Only fetch the layout from URL if layout ID is not available.
+    // if (!unappliedLayoutArgs.layoutId && unappliedLayoutArgs.layoutUrl) {
+    if (!unappliedLayoutArgs.layoutId && unappliedLayoutArgs.layoutUrl) {
+      void fetchLayoutFromUrl();
+    }
+
     log.debug(`Initializing layout from url: ${unappliedLayoutArgs.layoutId}`);
     setSelectedLayoutId(unappliedLayoutArgs.layoutId);
-    setUnappliedLayoutArgs({ layoutId: undefined });
-  }, [currentUserRequired, playerPresence, setSelectedLayoutId, unappliedLayoutArgs?.layoutId]);
+    setUnappliedLayoutArgs({ layoutId: undefined, layoutUrl: undefined });
+  }, [
+    currentUserRequired,
+    playerPresence,
+    setSelectedLayoutId,
+    unappliedLayoutArgs?.layoutId,
+    fetchLayoutFromUrl,
+    unappliedLayoutArgs?.layoutUrl
+  ]);
 }
 
 function useSyncTimeFromUrl(targetUrlState: AppURLState | undefined) {

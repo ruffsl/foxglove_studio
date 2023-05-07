@@ -123,3 +123,18 @@ export function windowAppURLState(): AppURLState | undefined {
     return undefined;
   }
 }
+
+/**
+ * Tries to return app url from the window's current location.
+ */
+export function windowAppURL(): URL | undefined {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    return new URL(window.location.href);
+  } catch {
+    return undefined;
+  }
+}
