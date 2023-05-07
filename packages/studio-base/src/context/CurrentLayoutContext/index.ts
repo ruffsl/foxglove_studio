@@ -30,6 +30,7 @@ import {
 } from "./actions";
 
 export type LayoutID = string & { __brand: "LayoutID" };
+export type LayoutURL = string & { __brand: "LayoutURL" };
 
 export type LayoutState = Readonly<{
   selectedLayout:
