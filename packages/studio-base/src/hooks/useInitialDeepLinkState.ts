@@ -112,12 +112,12 @@ function useSyncLayoutFromUrl(
       data: layoutData,
       permission: "CREATOR_WRITE",
     });
-    unappliedLayoutArgs.layoutId = newLayout.id;
-  }, [layoutManager, unappliedLayoutArgs]);
+    setSelectedLayoutId(newLayout.id);
+  }, [layoutManager, unappliedLayoutArgs, setSelectedLayoutId]);
 
   // Select layout from URL.
   useEffect(() => {
-    if (!unappliedLayoutArgs?.layoutId && !unappliedLayoutArgs?.layoutUrl) {
+    if (!unappliedLayoutArgs?.layoutUrl && !unappliedLayoutArgs?.layoutId) {
       return;
     }
 
@@ -128,14 +128,16 @@ function useSyncLayoutFromUrl(
       return;
     }
 
-    // Only fetch the layout from URL if layout ID is not available.
-    // if (!unappliedLayoutArgs.layoutId && unappliedLayoutArgs.layoutUrl) {
-    if (!unappliedLayoutArgs.layoutId && unappliedLayoutArgs.layoutUrl) {
+    // Only fetch layout from URL if no ID is selected.
+    if (unappliedLayoutArgs.layoutUrl && !unappliedLayoutArgs.layoutId) {
+      log.debug(`Fetching layout from layoutUrl: ${unappliedLayoutArgs.layoutUrl}`);
       void fetchLayoutFromUrl();
     }
+    else if (unappliedLayoutArgs.layoutId) {
+      log.debug(`Selecting layout from layoutId: ${unappliedLayoutArgs.layoutId}`);
+      setSelectedLayoutId(unappliedLayoutArgs.layoutId);
+    }
 
-    log.debug(`Initializing layout from url: ${unappliedLayoutArgs.layoutId}`);
-    setSelectedLayoutId(unappliedLayoutArgs.layoutId);
     setUnappliedLayoutArgs({ layoutId: undefined, layoutUrl: undefined });
   }, [
     currentUserRequired,
