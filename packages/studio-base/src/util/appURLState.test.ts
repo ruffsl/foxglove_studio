@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { Time, toRFC3339String } from "@foxglove/rostime";
-import { LayoutID } from "@foxglove/studio-base/index";
+import { LayoutID, LayoutURL} from "@foxglove/studio-base/index";
 import {
   AppURLState,
   updateAppURLState,
@@ -34,6 +34,18 @@ describe("app state url parser", () => {
       const url = urlBuilder();
       url.searchParams.append("layoutId", "1234");
       expect(parseAppURLState(url)?.layoutId).toBe("1234");
+    });
+
+    it("parses urls with only a relative layoutUrl", () => {
+      const url = urlBuilder();
+      url.searchParams.append("layoutUrl", "/bar.json");
+      expect(parseAppURLState(url)?.layoutUrl).toBe("/bar.json");
+    });
+
+    it("parses urls with only a absolute layoutUrl", () => {
+      const url = urlBuilder();
+      url.searchParams.append("layoutUrl", "https://foo.com/bar.json");
+      expect(parseAppURLState(url)?.layoutUrl).toBe("https://foo.com/bar.json");
     });
 
     it("parses rosbag data state urls", () => {
@@ -90,6 +102,16 @@ describe("app state encoding", () => {
       }).href,
     ).toEqual(
       "http://example.com/?ds=ros1-remote-bagfile&ds.url=http%3A%2F%2Ffoxglove.dev%2Ftest.bag&layoutId=123",
+    );
+  });
+
+  it("encodes layout url", () => {
+    expect(
+      updateAppURLState(baseURL(), {
+        layoutUrl: "https://foo.com/bar.json" as LayoutURL
+      }).href,
+    ).toEqual(
+      "http://example.com/?layoutUrl=https%3A%2F%2Ffoo.com%2Fbar.json",
     );
   });
 
